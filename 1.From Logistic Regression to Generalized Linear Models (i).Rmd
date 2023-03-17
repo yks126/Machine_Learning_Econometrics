@@ -1,0 +1,57 @@
+---
+title: "machine learning_lecture1"
+author: "Simon"
+date: "2023-01-03"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+```{r}
+X <- kronecker((0: 10), rep(1, 10))
+Y <- c(rep(0, 10), rep(0, 10), rep(0, 10), rep(1, 3), rep(0, 7), rep(1, 6), rep(0, 4), rep(1, 6), rep(0, 4), rep(1, 5), rep(0, 5), rep(1, 9), rep(0, 1), rep(1, 9), rep(0, 1), rep(1, 10), rep(1, 10))
+```
+
+```{r}
+ll.l <- function(x){
+  alpha.0 <- x[1]
+  alpha.1 <- x[2]
+  -sum(Y * log(plogis(X * alpha.1 + alpha.0)) + 
+         (1 - Y) * log(1 - plogis(X * alpha.1 + alpha.0)))
+}
+
+mle.L <- optim(c(-4, 1), ll.l, hessian = T)
+mle.L$par
+```
+
+```{r}
+library(nleqslv)
+
+m.l <- function(x){
+  alpha.0 <- x[1]
+  alpha.1 <- x[2]
+  m.1 <- sum(Y -plogis(X * alpha.1 + alpha.0))
+  m.2 <- sum((Y -plogis(X * alpha.1 + alpha.0)) * X)
+  return(c(m.1, m.2))
+}
+
+glm.l <- nleqslv(c(-4, 1), m.l)
+glm.l$x
+```
+
+這格式用來畫圖的
+```{r}
+
+#這格式用來畫圖的
+Dose <- seq(0, 10, by = 0.1)
+Prob.Death <- plogis(glm.l$x[1] + Dose * glm.l$x[2])
+plot(Dose, Prob.Death, type = "l")
+```

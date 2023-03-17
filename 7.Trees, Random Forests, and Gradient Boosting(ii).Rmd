@@ -1,0 +1,157 @@
+---
+title: "Trees, Random Forests, and Gradient Boosting"
+author: "Simon"
+date: "2023-01-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+```{r}
+library(MASS)
+?Boston
+
+head(Boston, n = 10)
+
+set.seed(18)
+train.idx <- sample(1: nrow(Boston), nrow(Boston) / 2)
+Boston.train <- Boston[train.idx, ]
+Boston.test <- Boston[-train.idx, ]
+```
+
+```{r}
+# Trees
+library(tree)
+
+tree.boston <- tree(medv ~ ., Boston.train)
+summary(tree.boston)
+
+plot(tree.boston)
+text(tree.boston, pretty = 0)
+```
+
+```{r}
+#regression trees
+
+tree.boston.2 <- tree(medv ~ ., Boston.train,
+                      control = tree.control(nobs = 253,
+                                             mincut = 1,
+                                             minsize = 2,
+                                             mindev = 0))
+summary(tree.boston.2)
+
+plot(tree.boston.2)
+text(tree.boston.2, pretty = 0)
+```
+
+```{r}
+cv.boston.2 <- cv.tree(tree.boston.2) # 10-fold cross validation
+
+plot(tail(cv.boston.2$size, n = 10), tail(cv.boston.2$dev, n = 10), type = "b")
+tail(cv.boston.2$size, n = 10)
+tail(cv.boston.2$dev, n = 10)
+tail(cv.boston.2$k, n = 10) # alpha
+
+prune.boston.2 <- prune.tree(tree.boston.2, best = 8)
+summary(prune.boston.2)
+
+plot(prune.boston.2)
+text(prune.boston.2, pretty = 0)
+```
+
+```{r}
+rmse <- function(actual, predicted){
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+boston.pred.train <- predict(prune.boston.2, newdata = Boston.train)
+rmse(boston.pred.train, Boston.train$medv)
+
+sqrt(summary(prune.boston.2)$dev / nrow(Boston.train))
+
+boston.pred.test <- predict(prune.boston.2, newdata = Boston.test)
+rmse(boston.pred.test, Boston.test$medv)
+
+boston.lm <- lm(medv ~ ., Boston.train)
+
+boston.lm.pred.train <- predict(boston.lm, newdata = Boston.train)
+rmse(boston.lm.pred.train, Boston.train$medv)
+
+boston.lm.pred.test <- predict(boston.lm, newdata = Boston.test)
+rmse(boston.lm.pred.test, Boston.test$medv)
+```
+
+```{r}
+#Random Forests
+
+library(randomForest)
+set.seed(18)
+boston.forest <- randomForest(medv ~ ., data = Boston.train, importance = TRUE)
+boston.forest
+```
+
+```{r}
+tuneRF(Boston.train[, -14], Boston.train[, 14], stepFactor = 4/3)
+
+library(caret)
+control <- trainControl(method = "oob")
+tunegrid <- expand.grid(.mtry = seq(3, 7, 1))
+boston.forest.caret <- train(medv ~ .,
+                             data = Boston.train,
+                             method = "rf",
+                             metric = "RMSE",
+                             tuneGrid = tunegrid,
+                             trControl = control)
+print(boston.forest.caret)
+
+importance(boston.forest)
+varImpPlot(boston.forest)
+
+boston.forest.13 <- randomForest(medv ~ .,
+                                 data = Boston.train,
+                                 mtry = 13,
+                                 importance = TRUE)
+importance(boston.forest.13)
+varImpPlot(boston.forest.13)
+```
+
+```{r}
+boston.rf.pred.train <- predict(boston.forest, newdata = Boston.train)
+rmse(boston.rf.pred.train, Boston.train$medv)
+
+boston.rf.pred.test <- predict(boston.forest, newdata = Boston.test)
+rmse(boston.rf.pred.test, Boston.test$medv)
+
+rmse(boston.forest$predicted, Boston.train$medv)
+```
+
+```{r}
+# Gradient Boosting
+
+library(gbm) # gradient boosting machine
+set.seed(18)
+boston.gbm.1 <- gbm(medv ~ .,
+                    data = Boston.train,
+                    distribution = "gaussian",
+                    n.trees = 5000,
+                    interaction.depth = 1,
+                    shrinkage = 0.01,
+                    bag.fraction = 0.5,
+                    cv.folds = 10)
+boston.gbm.1
+summary(boston.gbm.1)
+```
+
+```{r}
+boston.gb.1.pred.train <- predict(boston.gbm.1, newdata = Boston.train)
+rmse(boston.gb.1.pred.train, Boston.train$medv)
+
+boston.gb.1.pred.test <- predict(boston.gbm.1, newdata = Boston.test)
+rmse(boston.gb.1.pred.test, Boston.test$medv)
+```

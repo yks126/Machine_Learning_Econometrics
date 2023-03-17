@@ -1,0 +1,68 @@
+---
+title: "machine learning-Bootstrap Standard Errors(I)"
+author: "Simon"
+date: "2023-01-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+x and Y are returns of two financial assets with
+E(X) = 0, E(Y) = 0, var(X) = 1, var(Y) = 1.12, and cov(X, Y) = 0.5.
+
+To minimize the variance of the portfolio: alpha * X + (1 - alpha) * Y,
+the optimal alpha is
+(var(Y) - cov(X, Y)) / (var(X) + var(Y) - 2 * cov(X, Y)) = 0.6.
+
+However, we do not observe E(X), E(Y), var(X), var(Y), and cov(X, Y).
+All we have are 100 historical oberservation of X and Y.
+(For simplicity, suppose X and Y are normally distribution.)
+
+```{r}
+rm(list = ls())
+set.seed(1234)
+
+N <- 100
+
+X <- rnorm(N)             # X is standard normal
+Y <- rnorm(N) + 0.5 * X   # E(Y) = 0, var(Y) = 1.25, cov(X, Y) = 0.5
+
+var(X)
+var(Y)
+cov(X, Y)
+
+alpha.h <- (var(Y) - cov(X, Y)) / (var(X) + var(Y) - 2 * cov(X, Y))
+alpha.h
+```
+```{r}
+B <- 200
+alpha.h.boot <- numeric(B)
+
+for (b in 1: B) {
+  ind <- sample(1: 100, size = 100, replace = T)
+  alpha.h.boot[b] <- (var(Y[ind]) - cov(X[ind], Y[ind])) / (var(X[ind]) + var(Y[ind]) - 2 * cov(X[ind], Y[ind]))
+}
+sd(alpha.h.boot)
+```
+
+```{r}
+R <- 2000
+
+alpha.h.s <- numeric(R)
+for (r in 1: R) {
+  X <- rnorm(N)
+  Y <- rnorm(N) + 0.5 * X
+  alpha.h.s[r] <- (var(Y) - cov(X, Y)) / (var(X) + var(Y) - 2 * cov(X, Y))
+}
+
+sd(alpha.h.s)
+```
+
+
+
+
+
+
+

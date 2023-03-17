@@ -1,0 +1,61 @@
+---
+title: "Cross Validation and Covariance Penalties"
+author: "Simon"
+date: "2023-01-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+rm(list = ls())
+library(Matrix)
+library(glmnet)
+set.seed(123456)
+```
+
+y(i) = 1 + cos(2 * pi *x(i)) + epsilon(i)
+x(i) i.i.d. N(0, 1), epsilon(i) i.i.d. N(0, 1)
+
+```{r}
+N <- 200
+
+X   <- rnorm(N)
+Eps <- rnorm(N)
+Y   <- Eps + X ^ 2 - X + 1
+
+Z <- X ^ 2
+Z <- cbind(X, Z)
+```
+
+```{r}
+# N-Fold CV / LOOCV
+cv.lasso <- cv.glmnet(Z, Y, nfolds = N, lambda = c(1, 0)) #套件要求lambda需指定兩個 
+cv.lasso$cvm[2]
+#alpha = 1 by default <- lasso
+#lambda = 0 <- lasso is OLS
+
+# 20-Fold CV
+cv.lasso <- cv.glmnet(Z, Y, nfolds = 20, lambda = c(1, 0)) 
+cv.lasso$cvm[2]
+
+# 10-Fold CV
+cv.lasso <- cv.glmnet(Z, Y, nfolds = 10, lambda = c(1, 0)) 
+cv.lasso$cvm[2]
+
+# 5-Fold CV
+cv.lasso <- cv.glmnet(Z, Y, nfolds = 5, lambda = c(1, 0)) 
+cv.lasso$cvm[2]
+```
+```{r}
+# Mallows' CP
+reg <- lm(Y ~ Z)
+mean(reg$residuals ^ 2) + 2 * 3* sum((reg$residuals ^ 2) / (N *(N- 3)))
+
+proc.time()
+```

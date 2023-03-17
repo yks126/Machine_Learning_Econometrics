@@ -1,0 +1,86 @@
+---
+title: "Sparse Modeling and Lasso"
+author: "Simon"
+date: "2023-01-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list = ls())
+```
+
+```{r}
+# We do not have the file.
+Theft = read.csv("theft.csv") 
+head(Theft)
+ncol(Theft)
+nrow(Theft)
+```
+
+```{r}
+library(leaps)
+
+best.fit = regsubsets(theft ~ ., data = Theft, nvmax = 16, method = "exhaustive")
+# "nvmax" is the maximum size of subsets we wish to examine
+# method  = c("exhaustive", "backward", "forward", "seqrep")
+
+summary.fit = summary(best.fit)
+summary.fit
+
+min(summary.fit$cp)
+which.min(summary.fit$cp)
+coef(best.fit, which.min(summary.fit$cp))
+```
+
+```{r}
+best.fit.1 = regsubsets(theft ~ ., data = Theft, nvmax = 16, method = "forward")
+
+summary.fit.1 = summary(best.fit.1)
+
+min(summary.fit.1$cp)
+which.min(summary.fit.1$cp)
+coef(best.fit.1, which.min(summary.fit.1$cp))
+```
+
+```{r}
+b = which.min(summary.fit$cp)
+
+plot(summary.fit$cp, xlab = "Number of Variables", ylab = "Mallows' Cp", type = "1")
+points(b, summary.fit$cp[b], col = "red", cex = 2, pch = 20)
+which.min(summary.fit$cp) # The smallest Cp also corresponds to the model with 8 variables.
+
+plot(summary.fit$rss, xlab  = "Number of variables", ylab = "Residual sum of squares", type = "l")
+
+plot(summary.fit$rsq, xlab = "Number of Variables", ylab = "R-squared", type = "l")
+``` 
+
+```{r}
+library(glmnet)
+
+X <- model.matrix(theft ~ ., Theft)[, -1] # design matrix without intercept
+Y <- Theft$theft
+
+ridge.fit = glmnet(X, Y , alpha = 0)
+ridge.fit$lambda[1]
+coef(ridge.fit)[, 1]
+ridge.fit$lambda[100]
+coef(ridge.fit)[, 100]
+
+lasso.fit = glmnet(X, Y, alpha = 1)
+lasso.fit$lambda[1]
+coef(lasso.fit)[, 1]
+lasso.fit$lambda[67]
+coef(lasso.fit)[, 67]
+
+plot(lasso.fit)
+
+cv.lasso.fit <- cv.glmnet(X, Y)
+
+plot(cv.lasso.fit)
+
+coef(cv.lasso.fit, s = "lambda.min")
+```
